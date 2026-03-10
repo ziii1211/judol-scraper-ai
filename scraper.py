@@ -54,32 +54,32 @@ async def main():
             except Exception:
                 print("[!] Waktu tunggu habis atau halaman belum selesai loading sepenuhnya. Lanjut memindai...")
             
-           print("[+] Asumsi sudah berhasil masuk ke dalam akun!")
+            print("[+] Asumsi sudah berhasil masuk ke dalam akun!")
             
             # --- MENUJU HALAMAN DEPOSIT ---
-            print("\n[*] Mencari tombol Deposit...")
+            print("\n[*] Mencari tombol Deposit menggunakan class khusus...")
             
-            # Bot akan mencari tombol yang tulisannya "Deposit", "Isi Saldo", atau "Top Up"
-            tombol_deposit = page.locator("text=/Deposit|Isi Saldo|Top Up/i").first
-            
-            if await tombol_deposit.is_visible():
+            try:
+                # Kita suruh bot menunggu maksimal 15 detik sampai tombol dengan class tersebut muncul
+                tombol_deposit = await page.wait_for_selector("div.base_content-9EwpE", state="visible", timeout=15000)
+                
                 print("[*] Tombol Deposit ditemukan! Mengklik...")
                 await tombol_deposit.click()
                 
-                # Tunggu 5 detik agar halaman deposit / pop-up deposit terbuka sepenuhnya
-                print("[*] Menunggu halaman deposit dimuat...")
+                # Tunggu 5 detik agar animasi pop-up/halaman deposit terbuka sepenuhnya
+                print("[*] Menunggu isi halaman deposit dimuat...")
                 await page.wait_for_timeout(5000) 
-            else:
-                print("[!] Tombol Deposit tidak ditemukan secara otomatis di layar.")
+                
+            except Exception:
+                print("[!] Tombol Deposit dengan class tersebut tidak ditemukan (mungkin loading lama).")
                 print("[!] Silakan klik tombol Deposit secara MANUAL di browser sekarang!")
-                # Beri waktu 10 detik buat kamu ngeklik manual kalau bot gagal nemu tombolnya
+                # Beri waktu 10 detik buat kamu ngeklik manual kalau bot gagal
                 await page.wait_for_timeout(10000)
 
             # --- MULAI PEMINDAIAN REGEX ---
             body_text = await page.locator("body").inner_text()
             
-            # Trik Tambahan: Kadang bandar nulis nomor pakai spasi (misal: 0812 3456 7890)
-            # Kita bersihkan dulu spasinya khusus untuk teks yang mau di-scan
+            # Trik Tambahan: Kadang bandar nulis nomor pakai spasi atau tanda hubung
             teks_bersih = body_text.replace(" ", "").replace("-", "")
 
             print("\n" + "="*40)
@@ -88,16 +88,16 @@ async def main():
 
             # Regex untuk Nomor HP Indonesia (E-Wallet)
             hp_pattern = r"(?:08|\+?628)\d{7,11}"
-            nomor_hp_ditemukan = re.findall(hp_pattern, teks_bersih) # Scan dari teks_bersih
+            nomor_hp_ditemukan = re.findall(hp_pattern, teks_bersih)
 
             # Regex untuk Nomor Rekening Bank (10-15 digit angka)
             rek_pattern = r"\b\d{10,15}\b"
-            nomor_rek_ditemukan = re.findall(rek_pattern, teks_bersih) # Scan dari teks_bersih
+            nomor_rek_ditemukan = re.findall(rek_pattern, teks_bersih)
 
             # Menghapus duplikat
             nomor_hp_ditemukan = list(set(nomor_hp_ditemukan))
             nomor_rek_ditemukan = list(set(nomor_rek_ditemukan))
-            
+
             print(f"[*] Nomor HP / E-Wallet Ditemukan ({len(nomor_hp_ditemukan)}):")
             for hp in nomor_hp_ditemukan:
                 print(f"    -> {hp}")
